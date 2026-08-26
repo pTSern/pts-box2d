@@ -64,6 +64,9 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
         return _body;
     }
 
+    revoke() {
+    }
+
     abstract debug(graphic: Graphics, lpos: Vec3): void
     abstract raycast(p1: Vec2, p2: Vec2, center: Vec2): Box2D_IRaycastHit
 }

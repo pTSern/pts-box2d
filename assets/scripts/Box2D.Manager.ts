@@ -1,9 +1,11 @@
 
-import { _decorator, Graphics, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, UITransform, v3 } from 'cc';
+import { _decorator, Graphics, JsonAsset, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, UITransform, v3 } from 'cc';
 import { Box2D_Base } from './Box2D.Base';
 import { editor_property, singleton } from 'db://pts-core/scripts/utils/pClass';
 import { pConst, pEngine } from 'db://pts-core/scripts/utils';
 import { Box2D_Shape } from './Box2D.Shape';
+import { Helper_IdSelector } from 'db://pts-core/scripts/helper/Helper.IdSelector';
+import { Pooler_Node } from 'db://pts-core/scripts/pooler/Pooler.Node';
 
 const { ccclass, property, executionOrder } = _decorator;
 
@@ -13,6 +15,12 @@ const _$methods = ['_BeginContact', '_EndContact', '_PreSolve', '_PostSolve'];
 @singleton()
 @executionOrder(0)
 export class Box2D_Manager extends Box2D_Base {
+    @property({ type: Helper_IdSelector, group: pConst.GROUPS.CORE })
+    pool: Helper_IdSelector = new Helper_IdSelector();
+
+    @property({ type: JsonAsset, group: pConst.GROUPS.get('Listener') })
+    actRecycle: JsonAsset[] = [];
+
     @property({ tooltip: "Enable debug drawing of shape bounds (Circle: RED, Box: GREEN)", group: pConst.GROUPS.EDITOR })
     debugDraw: boolean = false;
 
@@ -22,6 +30,11 @@ export class Box2D_Manager extends Box2D_Base {
     @editor_property(Box2D_Shape)
     protected _bodies: Box2D_Shape[] = [];
     protected _world: b2.b2World = null;
+
+    @editor_property(Pooler_Node)
+    protected _pooler: Pooler_Node = null;
+
+    get pooler() { return this._pooler; }
 
     public get bodies() {
         return this._bodies;
@@ -34,8 +47,20 @@ export class Box2D_Manager extends Box2D_Base {
     }
 
     protected onLoad(): void {
+        this._pooler = Pooler_Node.pool(this.pool);
+
         this._world = PhysicsSystem2D.instance.physicsWorld.impl as b2.b2World;
         this._fixed(this._world);
+
+        pEngine.Json.event.add(this.actRecycle, { func: this._onRecyle, binder: this })
+    }
+
+    protected _onRecyle() {
+        this._bodies.forEach(_ => {
+            _.revoke();
+            this._pooler.put(_.node);
+        })
+        this._bodies = [];
     }
 
     protected lateUpdate(): void {

@@ -85,7 +85,8 @@ export class Box2D_Runtime {
                 fab,
                 parent: this.pool,
                 pos: { position: _worldPos, isWorldPos: true },
-                isDisconnectPrefabLink: true
+                isDisconnectPrefabLink: true,
+                pool: this.papa.pooler
             }, [
                 {
                     type: Box2D_Shape,

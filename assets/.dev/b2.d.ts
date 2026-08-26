@@ -2332,7 +2332,7 @@ declare namespace b2 {
          * @param position The world position of the body's local origin.
          * @param angle The world rotation in radians.
          */
-        SetTransformVec(position: XY, angle: number): void;
+        SetTransformVec(position: IXY, angle: number): void;
         SetTransformXY(x: number, y: number, angle: number): void;
         SetTransform(xf: b2Readonly<b2Transform>): void;
         /**
@@ -2367,7 +2367,7 @@ declare namespace b2 {
          *
          * @param v The new linear velocity of the center of mass.
          */
-        SetLinearVelocity(v: XY): void;
+        SetLinearVelocity(v: IXY): void;
         /**
          * Get the linear velocity of the center of mass.
          *

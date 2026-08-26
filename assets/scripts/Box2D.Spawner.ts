@@ -13,13 +13,13 @@ const { ccclass, property } = _decorator;
 @ccclass('Box2D_Spawner')
 export class Box2D_Spawner extends Smart_StartUp {
 
-    @property({ type: Box2D_ESpawnOpt })
+    @property({ type: Box2D_ESpawnOpt, group: pConst.GROUPS.CORE })
     spawnOption: Box2D_ESpawnOpt = Box2D_ESpawnOpt.Parallel;
 
-    @property({ type: Node })
+    @property({ type: Node, group: pConst.GROUPS.CORE })
     pool: Node = null;
 
-    @property({ type: [Box2D_Option] })
+    @property({ type: [Box2D_Option], group: pConst.GROUPS.CORE })
     options: Box2D_Option[] = [];
 
     @editor_property([Box2D_Runtime])
