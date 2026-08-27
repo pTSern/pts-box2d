@@ -1,10 +1,10 @@
 
-import { _decorator, Node } from 'cc';
+import { _decorator, JsonAsset, Node } from 'cc';
 import { Box2D_ESpawnOpt } from './Box2D.Enums';
 import { Box2D_Option } from './Box2D.Option';
 import { editor_property } from 'db://pts-core/scripts/utils/pClass';
 import { Box2D_Runtime } from './Box2D.Runtime';
-import { pConst } from 'db://pts-core/scripts/utils';
+import { pConst, pEngine } from 'db://pts-core/scripts/utils';
 import { Smart_StartUp } from 'db://pts-core/scripts/Components/Smart/Smart.StartUp';
 import { Event_Flexer } from 'db://pts-core/scripts/Components/Event/Event.Flexer';
 
@@ -32,10 +32,14 @@ export class Box2D_Spawner extends Smart_StartUp {
     @property({ type: Event_Flexer, group: pConst.GROUPS.EVENT })
     onComplete: Event_Flexer = new Event_Flexer();
 
+    @property({ type: JsonAsset, group: pConst.GROUPS.LISTENER })
+    actWarmUp: JsonAsset[] = [];
+
     protected _onLoad(): void {
         this._runtimes = this.options.map(option => {
             return new Box2D_Runtime(option, this.pool);
         });
+        pEngine.Json.event.add(this.actWarmUp, { func: this._onWarmUp, binder: this });
     }
 
     protected _onExecute(): void {
@@ -49,10 +53,18 @@ export class Box2D_Spawner extends Smart_StartUp {
         }
     }
 
+    protected _onWarmUp(): void {
+        this._runtimes.forEach(_runtime => _runtime.warmup());
+    }
+
     protected _onPause(): void {
     }
 
     protected _onResume(): void {
+    }
+
+    protected _onDestroy(): void {
+        pEngine.Json.event.remove(this.actWarmUp, { func: this._onWarmUp, binder: this });
     }
 
     protected _onStop(): void {

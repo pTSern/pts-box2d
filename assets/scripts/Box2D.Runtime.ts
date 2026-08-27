@@ -20,6 +20,9 @@ export class Box2D_Runtime {
     @editor_property()
     pool: Node = null
 
+    @editor_property(Box2D_Shape)
+    protected _warms: Box2D_Shape[] = [];
+
     protected _spawnFunc: () => void = null;
     protected _delayFunc: () => void = null;
 
@@ -54,11 +57,30 @@ export class Box2D_Runtime {
         this.isSpawning = false;
     }
 
+    warmup() {
+        const opt = this.option;
+        console.log(`Box2D_Runtime warmup: `, opt);
+        for(let i = 0; i < opt.max; i++) {
+            pEngine.NodeUtils.create({
+                name: `solid_${i}`,
+                fab: opt.prefabs,
+                pool: this.papa.pooler
+            }, [
+                {
+                    type: Box2D_Shape,
+                    modifier: _ => {
+                        this._warms.push(_);
+                    }
+                }
+            ])
+        }
+    }
+
     spawn(onFinishedCallback: () => void): void {
         if (this.option.max > 0 && this.counter >= this.option.max) {
             this.stop();
             this.isFinished = true;
-            onFinishedCallback();
+            onFinishedCallback?.();
             return;
         }
 
@@ -73,31 +95,51 @@ export class Box2D_Runtime {
         const _height = transform.height;
         const _anchor = transform.anchorPoint;
 
-        for (let i = 0; i < countToSpawn; i++) {
+        const _warms = []
+        for(let i = 0; i < countToSpawn; i++) {
+            _warms.push(this._warms.shift())
+        }
+
+        console.log(`Box2D_Runtime spawn: `, _warms);
+        _warms.forEach(_comp => {
             const _localX = randomRange(-_anchor.x * _width, (1 - _anchor.x) * _width);
             const _localY = randomRange(-_anchor.y * _height, (1 - _anchor.y) * _height);
 
             const _worldPos = transform.convertToWorldSpaceAR(v3(_localX, _localY, 0));
+            _comp.node.setParent(this.pool);
+            _comp.node.setWorldPosition(_worldPos);
+            _comp.create(_worldPos, _comp.node);
+            this.papa.addBody(_comp);
+            this.counter++;
 
-            const fab = pMath.rand(opt.prefabs);
-            pEngine.NodeUtils.create({
-                name: `solid_${i}`,
-                fab,
-                parent: this.pool,
-                pos: { position: _worldPos, isWorldPos: true },
-                isDisconnectPrefabLink: true,
-                pool: this.papa.pooler
-            }, [
-                {
-                    type: Box2D_Shape,
-                    modifier: (_comp, _node) => {
-                        _comp.create(_worldPos, _node);
-                        this.papa.addBody(_comp);
-                        this.counter++;
-                    }
-                }
-            ]);
-        }
+        })
+        onFinishedCallback?.();
+
+        //for (let i = 0; i < countToSpawn; i++) {
+        //    const _localX = randomRange(-_anchor.x * _width, (1 - _anchor.x) * _width);
+        //    const _localY = randomRange(-_anchor.y * _height, (1 - _anchor.y) * _height);
+
+        //    const _worldPos = transform.convertToWorldSpaceAR(v3(_localX, _localY, 0));
+
+        //    const fab = pMath.rand(opt.prefabs);
+        //    pEngine.NodeUtils.create({
+        //        name: `solid_${i}`,
+        //        fab,
+        //        parent: this.pool,
+        //        pos: { position: _worldPos, isWorldPos: true },
+        //        isDisconnectPrefabLink: true,
+        //        pool: this.papa.pooler
+        //    }, [
+        //        {
+        //            type: Box2D_Shape,
+        //            modifier: (_comp, _node) => {
+        //                _comp.create(_worldPos, _node);
+        //                this.papa.addBody(_comp);
+        //                this.counter++;
+        //            }
+        //        }
+        //    ]);
+        //}
     }
 
     protected execute(onFinishedCallback: () => void): void {
