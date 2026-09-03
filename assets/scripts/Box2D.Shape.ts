@@ -17,10 +17,10 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     @property({ min: 0 })
     numAngularDamping: number = 0;
 
-    @property()
+    @property({})
     isFixedRotation: boolean = false;
 
-    @property()
+    @property({})
     density: number = 1.0;
 
     @property({ min: 0, max: 1, step: 0.01, slide: true })
