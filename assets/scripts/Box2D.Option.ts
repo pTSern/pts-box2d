@@ -1,4 +1,4 @@
-import { _decorator, CCInteger, Prefab, UITransform, Vec2 } from "cc";
+import { _decorator, CCInteger, Prefab, UITransform } from "cc";
 import { Box2D_EShape } from "./Box2D.Enums";
 
 const { ccclass, property } = _decorator

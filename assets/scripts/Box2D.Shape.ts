@@ -65,6 +65,7 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     }
 
     revoke() {
+        PhysicsSystem2D.instance.physicsWorld.impl.DestroyBody(this.body);
     }
 
     abstract debug(graphic: Graphics, lpos: Vec3): void
