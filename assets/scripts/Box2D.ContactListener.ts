@@ -2,7 +2,6 @@
 import { _decorator, Node, UITransform, Vec2, PHYSICS_2D_PTM_RATIO } from "cc";
 import { Event_Flexer } from "db://pts-core/scripts/Components/Event/Event.Flexer";
 import { pConst } from "db://pts-core/scripts/utils";
-import { Box2D_EShape } from "./Box2D.Enums";
 import { instance } from "db://pts-core/scripts/utils/pClass";
 import { Box2D_Manager } from "./Box2D.Manager";
 import { Box2D_Base } from "./Box2D.Base";
@@ -73,12 +72,7 @@ export class Box2D_ContactListener extends Box2D_Base {
                 let isOverlapping = false;
 
                 if (this.useShapeOverlap) {
-                    let radius = 0;
-                    if (_item.shapeType === Box2D_EShape.Circle) {
-                        radius = _item.radius;
-                    } else {
-                        radius = Math.sqrt(_item.size.x * _item.size.x + _item.size.y * _item.size.y) / 2;
-                    }
+                    const radius = _item.getBounce();
 
                     const minX = px - radius;
                     const maxX = px + radius;

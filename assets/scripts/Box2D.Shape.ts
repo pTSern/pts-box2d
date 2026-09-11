@@ -30,6 +30,7 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     restitution: number = 0.5;
 
     protected abstract _getShape(): b2.b2Shape;
+    abstract getBounce(): number
 
     create(wpos: IVec2Like, bounc: Node) {
         const _world = PhysicsSystem2D.instance.physicsWorld.impl as b2.b2World;

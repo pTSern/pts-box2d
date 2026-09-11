@@ -20,6 +20,10 @@ export class Box2D_Shape_Box extends Box2D_Shape {
         return _box
     }
 
+    getBounce(): number {
+        return Math.sqrt(this.size.x * this.size.x + this.size.y * this.size.y) / 2;
+    }
+
     debug(g: GraphicsComponent, lpos: math.Vec3): void {
         const _angle = this.body.GetAngle();
         const cos = Math.cos(_angle);

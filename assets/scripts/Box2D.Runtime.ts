@@ -1,7 +1,7 @@
 import { editor_ccclass, editor_property, instance } from "db://pts-core/scripts/utils/pClass";
 import { Box2D_Option } from "./Box2D.Option";
 import { Node, PhysicsSystem2D, randomRange, UITransform, v3 } from "cc";
-import { pEngine, pMath } from "db://pts-core/scripts/utils";
+import { pEngine } from "db://pts-core/scripts/utils";
 import { Box2D_Manager } from "./Box2D.Manager";
 import { Box2D_Shape } from "./Box2D.Shape";
 
@@ -40,8 +40,8 @@ export class Box2D_Runtime {
             this.execute(onFinishedCallback);
         };
 
-        if (this.option.preDelay > 0) {
-            this.papa.scheduleOnce(this._delayFunc, this.option.preDelay);
+        if (this.option.timer.preDelay > 0) {
+            this.papa.scheduleOnce(this._delayFunc, this.option.timer.preDelay);
         } else {
             this.execute(onFinishedCallback);
         }
@@ -60,10 +60,10 @@ export class Box2D_Runtime {
     warmup() {
         const opt = this.option;
         console.log(`Box2D_Runtime warmup: `, opt);
-        for(let i = 0; i < opt.max; i++) {
+        for(let i = 0; i < opt.data.max; i++) {
             pEngine.NodeUtils.create({
                 name: `solid_${i}`,
-                fab: opt.prefabs,
+                fab: opt.fabs.prefabs,
                 pool: this.papa.pooler
             }, [
                 {
@@ -77,7 +77,7 @@ export class Box2D_Runtime {
     }
 
     spawn(onFinishedCallback: () => void): void {
-        if (this.option.max > 0 && this.counter >= this.option.max) {
+        if (this.option.data.max > 0 && this.counter >= this.option.data.max) {
             this.stop();
             this.isFinished = true;
             onFinishedCallback?.();
@@ -88,7 +88,7 @@ export class Box2D_Runtime {
         if (!_world) return;
 
         const opt = this.option;
-        const countToSpawn = opt.max > 0 ? Math.min(opt.amount, opt.max - this.counter) : opt.amount;
+        const countToSpawn = opt.data.max > 0 ? Math.min(opt.data.amount, opt.data.max - this.counter) : opt.data.amount;
         const transform = opt.box || pEngine.CompUtils.get(this.papa, UITransform);
 
         const _width = transform.width;
@@ -147,6 +147,6 @@ export class Box2D_Runtime {
         this.spawn(onFinishedCallback);
 
         this._spawnFunc = this.spawn.bind(this, onFinishedCallback);
-        this.papa.schedule(this._spawnFunc, this.option.interval);
+        this.papa.schedule(this._spawnFunc, this.option.timer.interval);
     }
 }

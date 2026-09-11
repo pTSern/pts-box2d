@@ -16,6 +16,10 @@ export class Box2D_Shape_Circle extends Box2D_Shape {
         return _circle;
     }
 
+    getBounce(): number {
+        return this.radius;
+    }
+
     debug(g: GraphicsComponent, lpos: Vec3): void {
         const _angle = this.body.GetAngle();
         g.circle(lpos.x, lpos.y, this.radius);
@@ -59,6 +63,7 @@ export class Box2D_Shape_Circle extends Box2D_Shape {
         const normY = (hitY - center.y) / (this.radius || 1);
 
         return {
+            //solid: this,
             fixture: this.body.GetFixtureList(),
             point: v2(hitX, hitY),
             normal: v2(normX, normY),
