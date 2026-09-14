@@ -37,5 +37,13 @@ export class Box2D_Option {
 
     @property({ type: UITransform })
     box: UITransform = null;
+
+    protected _ready: boolean = false;
+    async ready() {
+        if(!this._ready) {
+            await Promise.all([this.data.ready, this.fabs.ready, this.timer.ready]);
+            this._ready = true;
+        }
+    }
 }
 

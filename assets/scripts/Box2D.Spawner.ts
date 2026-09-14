@@ -42,7 +42,11 @@ export class Box2D_Spawner extends Smart_StartUp {
         pEngine.Json.event.add(this.actWarmUp, { func: this._onWarmUp, binder: this });
     }
 
-    protected _onExecute(): void {
+    protected _doAwaitTillReady(): Promise<any> {
+        return Promise.all(this.options.map(option => option.ready()));
+    }
+
+    protected async _onExecute() {
         this._isOk = true;
 
         if (this.spawnOption === Box2D_ESpawnOpt.Parallel) {
@@ -53,7 +57,9 @@ export class Box2D_Spawner extends Smart_StartUp {
         }
     }
 
-    protected _onWarmUp(): void {
+    protected async _onWarmUp() {
+        await this._doAwaitTillReady();
+
         this._runtimes.forEach(_runtime => _runtime.warmup());
     }
 
