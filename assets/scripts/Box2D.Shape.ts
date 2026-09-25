@@ -11,9 +11,6 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     @property({ type: PhysicsGroup2D, tooltip: "Cocos 2D physics group (drives Box2D collision filtering via Cocos collision matrix)" })
     tag: number = PhysicsGroup2D.DEFAULT;
 
-    @property({ tooltip: "Type 2 filter: If true, physical collision still occurs (bounces/rolls), but emits NO gameplay events (silent)" })
-    isSilent: boolean = false;
-
     @property({  })
     gravity: Vec2 = v2(1, 1);
 
@@ -75,7 +72,6 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
             shape: this,
             body: _body,
             tag: this.tag,
-            isSilent: this.isSilent,
             isValid: true,
             getComponent: (type: any) => {
                 if (type === Box2D_Shape || type?.name === 'Box2D_Shape') return this;
