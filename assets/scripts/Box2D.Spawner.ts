@@ -60,7 +60,7 @@ export class Box2D_Spawner extends Smart_StartUp {
     protected async _onWarmUp() {
         await this._doAwaitTillReady();
 
-        this._runtimes.forEach(_runtime => _runtime.warmup());
+        this._runtimes?.forEach(_runtime => _runtime.warmup());
     }
 
     protected _onPause(): void {

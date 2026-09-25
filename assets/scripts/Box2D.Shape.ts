@@ -1,4 +1,4 @@
-import { _decorator, Component, Graphics, IVec2Like, Node, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, randomRange, v2, Vec2, Vec3 } from 'cc';
+import { _decorator, Component, Graphics, IVec2Like, Node, PHYSICS_2D_PTM_RATIO, PhysicsGroup2D, PhysicsSystem2D, randomRange, v2, Vec2, Vec3 } from 'cc';
 import { Box2D_IRaycastHit, Box2D_IShape } from './Box2D.Interfaces';
 
 const { ccclass, property } = _decorator;
@@ -7,6 +7,12 @@ const { ccclass, property } = _decorator;
 export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     shape: b2.b2Shape
     body: b2.b2Body
+
+    @property({ type: PhysicsGroup2D, tooltip: "Cocos 2D physics group (drives Box2D collision filtering via Cocos collision matrix)" })
+    tag: number = PhysicsGroup2D.DEFAULT;
+
+    @property({ tooltip: "Type 2 filter: If true, physical collision still occurs (bounces/rolls), but emits NO gameplay events (silent)" })
+    isSilent: boolean = false;
 
     @property({  })
     gravity: Vec2 = v2(1, 1);
@@ -54,11 +60,32 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
         _fixtureDef.friction = this.friction;
         _fixtureDef.restitution = this.restitution;
 
+        // Type 1: Physical collision filtering using Cocos built-in collision matrix
+        const matrix = PhysicsSystem2D.instance.collisionMatrix;
+        _fixtureDef.filter = {
+            categoryBits: this.tag,
+            maskBits: matrix && matrix[this.tag] !== undefined ? matrix[this.tag] : 0xFFFF,
+            groupIndex: 0,
+        };
+
         const _fixture = _body.CreateFixture(_fixtureDef);
+
+        const _targetProxy = {
+            node: bounc,
+            shape: this,
+            body: _body,
+            tag: this.tag,
+            isSilent: this.isSilent,
+            isValid: true,
+            getComponent: (type: any) => {
+                if (type === Box2D_Shape || type?.name === 'Box2D_Shape') return this;
+                return bounc ? bounc.getComponent(type) : null;
+            }
+        };
 
         _body.SetUserData(bounc);
         if (_fixture) {
-            _fixture.SetUserData({ collider: null, node: bounc, impl: null });
+            _fixture.SetUserData({ collider: _targetProxy, node: bounc, impl: this });
         }
 
         this.body = _body;
@@ -67,6 +94,21 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
 
     revoke() {
         PhysicsSystem2D.instance.physicsWorld.impl.DestroyBody(this.body);
+    }
+
+    setTag(tag: number) {
+        this.tag = tag;
+        if (this.body) {
+            const matrix = PhysicsSystem2D.instance.collisionMatrix;
+            const filter: b2.b2Filter = {
+                categoryBits: this.tag,
+                maskBits: matrix && matrix[this.tag] !== undefined ? matrix[this.tag] : 0xFFFF,
+                groupIndex: 0,
+            };
+            for (let f = this.body.GetFixtureList(); f; f = f.GetNext()) {
+                f.SetFilterData(filter);
+            }
+        }
     }
 
     abstract debug(graphic: Graphics, lpos: Vec3): void
