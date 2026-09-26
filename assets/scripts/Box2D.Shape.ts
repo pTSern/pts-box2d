@@ -1,5 +1,6 @@
 import { _decorator, Component, Graphics, IVec2Like, Node, PHYSICS_2D_PTM_RATIO, PhysicsGroup2D, PhysicsSystem2D, randomRange, v2, Vec2, Vec3 } from 'cc';
 import { Box2D_IRaycastHit, Box2D_IShape } from './Box2D.Interfaces';
+import _$ from './Box2D.Utils';
 
 const { ccclass, property } = _decorator;
 
@@ -92,8 +93,8 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
         PhysicsSystem2D.instance.physicsWorld.impl.DestroyBody(this.body);
     }
 
-    setTag(tag: number) {
-        this.tag = tag;
+    setTag(tag: number | PhysicsGroup2D | string) {
+        this.tag = _$.toTag(tag);
         if (this.body) {
             const matrix = PhysicsSystem2D.instance.collisionMatrix;
             const filter: b2.b2Filter = {
@@ -105,6 +106,17 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
                 f.SetFilterData(filter);
             }
         }
+    }
+
+    /**
+     * Compares the current shape tag with a PhysicsGroup2D, number, string, or array of groups.
+     * Accurately matches even if the input is a string enum name ("STONE"), numeric string ("2"), or number (2).
+     *
+     * @param target The PhysicsGroup2D, number, string, or array of groups to compare against.
+     * @returns True if current tag fits the target.
+     */
+    compare(target: pFlex.TArray<number | PhysicsGroup2D | string>): boolean {
+        return _$.compare(this.tag, target);
     }
 
     abstract debug(graphic: Graphics, lpos: Vec3): void
