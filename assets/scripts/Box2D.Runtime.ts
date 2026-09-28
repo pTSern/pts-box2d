@@ -100,7 +100,6 @@ export class Box2D_Runtime {
             _warms.push(this._warms.shift())
         }
 
-        console.log(`Box2D_Runtime spawn: `, _warms);
         _warms.forEach(_comp => {
             const _localX = randomRange(-_anchor.x * _width, (1 - _anchor.x) * _width);
             const _localY = randomRange(-_anchor.y * _height, (1 - _anchor.y) * _height);

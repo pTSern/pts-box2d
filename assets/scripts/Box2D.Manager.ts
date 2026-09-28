@@ -12,6 +12,10 @@ const { ccclass, property, executionOrder } = _decorator;
 
 const _$methods = ['_BeginContact', '_EndContact', '_PreSolve', '_PostSolve'];
 
+const _$tempWorldPos = v3();
+const _$tempNodePos = v3();
+const _$RAD2DEG = 180 / Math.PI;
+
 @ccclass('Box2D_Manager')
 @singleton()
 @executionOrder(0)
@@ -81,8 +85,14 @@ export class Box2D_Manager extends Box2D_Base {
             const _pos = _body.GetPosition();
             const _angle = _body.GetAngle();
 
-            _node.position = _transform.convertToNodeSpaceAR(v3(_pos.x * PHYSICS_2D_PTM_RATIO, _pos.y * PHYSICS_2D_PTM_RATIO));
-            _node.angle = _angle * (180 / Math.PI);
+            _$tempWorldPos.set(_pos.x * PHYSICS_2D_PTM_RATIO, _pos.y * PHYSICS_2D_PTM_RATIO, 0);
+            if (_transform) {
+                _transform.convertToNodeSpaceAR(_$tempWorldPos, _$tempNodePos);
+                _node.setPosition(_$tempNodePos);
+            } else {
+                _node.setPosition(_$tempWorldPos);
+            }
+            _node.angle = _angle * _$RAD2DEG;
         }
 
         if (!this.debugDraw) {
