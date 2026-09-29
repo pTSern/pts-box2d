@@ -1,16 +1,16 @@
 
 import { _decorator, Node, UITransform, Vec2, PHYSICS_2D_PTM_RATIO } from "cc";
-import { Event_Flexer } from "db://pts-core/scripts/Components/Event/Event.Flexer";
 import { pConst } from "db://pts-core/scripts/utils";
 import { instance } from "db://pts-core/scripts/utils/pClass";
 import { Box2D_Manager } from "./Box2D.Manager";
 import { Box2D_Base } from "./Box2D.Base";
+import { Box2D_Shape } from "./Box2D.Shape";
 
 const { ccclass, property, executionOrder } = _decorator;
 
 @ccclass("Box2D_ContactListener")
 @executionOrder(100)
-export class Box2D_ContactListener extends Box2D_Base {
+export abstract class Box2D_ContactListener extends Box2D_Base {
     @property({ group: pConst.GROUPS.OPTION, type: [Node], tooltip: "Trigger zone nodes. We check if solid bodies overlap their world bounds." })
     targets: Node[] = [];
 
@@ -20,22 +20,30 @@ export class Box2D_ContactListener extends Box2D_Base {
     @property({ group: pConst.GROUPS.OPTION })
     isDestroyOnExit: boolean = false;
 
-    @property({ type: Event_Flexer, group: pConst.GROUPS.EVENT })
-    onEnter: Event_Flexer = new Event_Flexer();
+    @property({ group: pConst.GROUPS.OPTION, tooltip: "If false, collision events (_onEnter, _onStay, _onExit) between two Box2D_Shape nodes are ignored." })
+    isCollideShapes: boolean = false;
 
-    @property({ type: Event_Flexer, group: pConst.GROUPS.EVENT })
-    onStay: Event_Flexer = new Event_Flexer();
+    get canCollideShapes(): boolean { return this.isCollideShapes; }
+    set canCollideShapes(v: boolean) { this.isCollideShapes = v; }
 
-    @property({ type: Event_Flexer, group: pConst.GROUPS.EVENT })
-    onExit: Event_Flexer = new Event_Flexer();
+    get collideShapes(): boolean { return this.isCollideShapes; }
+    set collideShapes(v: boolean) { this.isCollideShapes = v; }
 
     protected _pcontacts: Map<Node, Set<Node>> = new Map();
 
+    protected abstract _onEnter(target: Node, other: Node): void
+    protected abstract _onStay(target: Node, other: Node): void
+    protected abstract _onExit(target: Node, other: Node): void
+
     protected onDisable(): void {
         this._pcontacts.forEach((prevNodes, target) => {
+            const isTargetShape = !!(target.getComponent(Box2D_Shape));
             prevNodes.forEach(node => {
                 if (node && node.isValid) {
-                    this.onExit.emit(target, node);
+                    if (!this.isCollideShapes && isTargetShape && node.getComponent(Box2D_Shape)) {
+                        return;
+                    }
+                    this._onExit(target, node);
 
                     this.isDestroyOnExit && node.destroy();
                 }
@@ -49,11 +57,15 @@ export class Box2D_ContactListener extends Box2D_Base {
         const _count = _bodies.length;
         if (_count === 0) return;
 
-        this.targets.forEach(target => {
+        const targetList = this.targets.length > 0 ? this.targets : (this.node ? [this.node] : []);
+
+        targetList.forEach(target => {
             if (!target || !target.isValid) return;
 
             const _trans = target.getComponent(UITransform);
             if (!_trans) return;
+
+            const isTargetShape = !!(target.getComponent(Box2D_Shape));
 
             const _bound = _trans.getBoundingBoxToWorld();
             const _nodes = new Set<Node>();
@@ -64,6 +76,14 @@ export class Box2D_ContactListener extends Box2D_Base {
                 const _body = _item.body;
 
                 if (!_node || !_node.isValid) continue;
+
+                // Never collide a shape with itself
+                if (_node === target) continue;
+
+                // When isCollideShapes is false, skip collisions between two Box2D_Shapes
+                if (!this.isCollideShapes && isTargetShape && (_item instanceof Box2D_Shape || !!_node.getComponent(Box2D_Shape))) {
+                    continue;
+                }
 
                 const pos = _body.GetPosition();
                 const px = pos.x * PHYSICS_2D_PTM_RATIO;
@@ -97,15 +117,18 @@ export class Box2D_ContactListener extends Box2D_Base {
 
             _nodes.forEach(node => {
                 if (!prevNodes.has(node)) {
-                    this.onEnter.emit(target, node)
+                    this._onEnter(target, node);
                 } else {
-                    this.onStay.emit(target, node);
+                    this._onStay(target, node);
                 }
             });
 
             prevNodes.forEach(node => {
                 if (!_nodes.has(node)) {
-                    this.onExit.emit(target, node);
+                    if (!this.isCollideShapes && isTargetShape && node.getComponent(Box2D_Shape)) {
+                        return;
+                    }
+                    this._onExit(target, node);
                     this.isDestroyOnExit && node.destroy();
                 }
             });
