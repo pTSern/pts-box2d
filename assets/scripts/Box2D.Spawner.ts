@@ -71,6 +71,7 @@ export class Box2D_Spawner extends Smart_StartUp {
 
     protected _onDestroy(): void {
         pEngine.Json.event.remove(this.actWarmUp, { func: this._onWarmUp, binder: this });
+        this._runtimes.forEach(runtime => runtime.clear());
     }
 
     protected _onStop(): void {

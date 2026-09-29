@@ -46,9 +46,18 @@ export class Box2D_Manager extends Box2D_Base {
     }
 
     public addBody(shape: Box2D_Shape): void {
-        if(!shape || !shape.body || !shape.node) return;
+        if (!shape || !shape.body || !shape.node) return;
+        if (this._bodies.indexOf(shape) !== -1) return;
 
         this._bodies.push(shape);
+    }
+
+    public removeBody(shape: Box2D_Shape): void {
+        if (!shape) return;
+        const idx = this._bodies.indexOf(shape);
+        if (idx !== -1) {
+            this._bodies.splice(idx, 1);
+        }
     }
 
     protected onLoad(): void {
@@ -61,11 +70,17 @@ export class Box2D_Manager extends Box2D_Base {
     }
 
     protected _onRecyle() {
-        this._bodies.forEach(_ => {
-            _.revoke();
-            this._pooler.put(_.node);
-        })
+        const bodies = this._bodies.slice();
         this._bodies = [];
+        bodies.forEach(_ => {
+            if (_) {
+                const node = _.node;
+                _.revoke();
+                if (node && node.isValid && this._pooler) {
+                    this._pooler.put(node);
+                }
+            }
+        });
     }
 
     protected lateUpdate(): void {
@@ -76,8 +91,10 @@ export class Box2D_Manager extends Box2D_Base {
             const _node = item.node;
             const _body = item.body;
 
-            if (!_node || !_node.isValid) {
-                this._world.DestroyBody(_body);
+            if (!_node || !_node.isValid || !_body) {
+                if (_body) {
+                    try { this._world.DestroyBody(_body); } catch (e) {}
+                }
                 this._bodies.splice(i, 1);
                 continue;
             }

@@ -49,12 +49,27 @@ export class Box2D_Runtime {
 
     stop(): void {
         if (this._spawnFunc) {
-            this.papa.unschedule(this._spawnFunc);
+            this.papa?.unschedule(this._spawnFunc);
         }
         if (this._delayFunc) {
-            this.papa.unschedule(this._delayFunc);
+            this.papa?.unschedule(this._delayFunc);
         }
         this.isSpawning = false;
+    }
+
+    clear(): void {
+        this.stop();
+        while (this._warms.length > 0) {
+            const shape = this._warms.shift();
+            if (shape && shape.node && shape.node.isValid) {
+                shape.revoke();
+                if (this.papa?.pooler) {
+                    this.papa.pooler.put(shape.node);
+                } else {
+                    shape.node.destroy();
+                }
+            }
+        }
     }
 
     warmup() {
@@ -95,9 +110,37 @@ export class Box2D_Runtime {
         const _height = transform.height;
         const _anchor = transform.anchorPoint;
 
-        const _warms = []
-        for(let i = 0; i < countToSpawn; i++) {
-            _warms.push(this._warms.shift())
+        const _warms: Box2D_Shape[] = [];
+        for (let i = 0; i < countToSpawn; i++) {
+            let comp: Box2D_Shape = null;
+
+            while (this._warms.length > 0) {
+                const candidate = this._warms.shift();
+                if (candidate && candidate.isValid && candidate.node && candidate.node.isValid) {
+                    comp = candidate;
+                    break;
+                }
+            }
+
+            if (!comp) {
+                const res = pEngine.NodeUtils.create({
+                    name: `solid_${this.counter + i}`,
+                    fab: opt.fabs?.prefabs,
+                    pool: this.papa?.pooler
+                }, [
+                    {
+                        type: Box2D_Shape,
+                        modifier: _ => { comp = _; }
+                    }
+                ]);
+                if (!comp && res.node && res.node.isValid) {
+                    comp = res.node.getComponent(Box2D_Shape);
+                }
+            }
+
+            if (comp && comp.node && comp.node.isValid) {
+                _warms.push(comp);
+            }
         }
 
         _warms.forEach(_comp => {
@@ -105,13 +148,15 @@ export class Box2D_Runtime {
             const _localY = randomRange(-_anchor.y * _height, (1 - _anchor.y) * _height);
 
             const _worldPos = transform.convertToWorldSpaceAR(v3(_localX, _localY, 0));
-            _comp.node.setParent(this.pool);
+            if (this.pool && this.pool.isValid) {
+                _comp.node.setParent(this.pool);
+            }
             _comp.node.setWorldPosition(_worldPos);
             _comp.create(_worldPos, _comp.node);
-            this.papa.addBody(_comp);
+            this.papa?.addBody(_comp);
             this.counter++;
 
-        })
+        });
         onFinishedCallback?.();
 
         //for (let i = 0; i < countToSpawn; i++) {

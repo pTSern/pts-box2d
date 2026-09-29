@@ -1,12 +1,18 @@
 
-import { _decorator, Node, UITransform, Vec2, PHYSICS_2D_PTM_RATIO } from "cc";
+import { _decorator, Node, UITransform, PHYSICS_2D_PTM_RATIO } from "cc";
 import { pConst } from "db://pts-core/scripts/utils";
-import { instance } from "db://pts-core/scripts/utils/pClass";
+import { editor_property, instance } from "db://pts-core/scripts/utils/pClass";
 import { Box2D_Manager } from "./Box2D.Manager";
 import { Box2D_Base } from "./Box2D.Base";
 import { Box2D_Shape } from "./Box2D.Shape";
 
 const { ccclass, property, executionOrder } = _decorator;
+
+interface ContactState {
+    previous: Set<Node>;
+    current: Set<Node>;
+    frame: number;
+}
 
 @ccclass("Box2D_ContactListener")
 @executionOrder(100)
@@ -29,25 +35,27 @@ export abstract class Box2D_ContactListener extends Box2D_Base {
     get collideShapes(): boolean { return this.isCollideShapes; }
     set collideShapes(v: boolean) { this.isCollideShapes = v; }
 
-    protected _pcontacts: Map<Node, Set<Node>> = new Map();
+    protected _pcontacts: Map<Node, ContactState> = new Map();
+    @editor_property()
+    protected _contactFrame: number = 0;
 
     protected abstract _onEnter(target: Node, other: Node): void
     protected abstract _onStay(target: Node, other: Node): void
     protected abstract _onExit(target: Node, other: Node): void
 
     protected onDisable(): void {
-        this._pcontacts.forEach((prevNodes, target) => {
+        this._pcontacts.forEach((state, target) => {
             const isTargetShape = !!(target.getComponent(Box2D_Shape));
-            prevNodes.forEach(node => {
+            for (const node of state.previous) {
                 if (node && node.isValid) {
-                    if (!this.isCollideShapes && isTargetShape && node.getComponent(Box2D_Shape)) {
-                        return;
+                    if (!this.isCollideShapes && isTargetShape) {
+                        continue;
                     }
                     this._onExit(target, node);
 
                     this.isDestroyOnExit && node.destroy();
                 }
-            });
+            }
         });
         this._pcontacts.clear();
     }
@@ -55,85 +63,98 @@ export abstract class Box2D_ContactListener extends Box2D_Base {
     protected lateUpdate() {
         const _bodies = instance(Box2D_Manager).bodies;
         const _count = _bodies.length;
-        if (_count === 0) return;
+        const frame = ++this._contactFrame;
 
-        const targetList = this.targets.length > 0 ? this.targets : (this.node ? [this.node] : []);
+        if (this.targets.length > 0) {
+            for (let i = 0; i < this.targets.length; i++) {
+                this._step(this.targets[i], _bodies, _count, frame);
+            }
+        } else {
+            this._step(this.node, _bodies, _count, frame);
+        }
 
-        targetList.forEach(target => {
-            if (!target || !target.isValid) return;
+        this._cleanup(frame);
+    }
 
-            const _trans = target.getComponent(UITransform);
-            if (!_trans) return;
+    private _step(target: Node, bodies: Box2D_Shape[], bodyCount: number, frame: number): void {
+        if (!target || !target.isValid) return;
 
-            const isTargetShape = !!(target.getComponent(Box2D_Shape));
+        const transform = target.getComponent(UITransform);
+        if (!transform) return;
 
-            const _bound = _trans.getBoundingBoxToWorld();
-            const _nodes = new Set<Node>();
+        let state = this._pcontacts.get(target);
+        if (!state) {
+            state = { previous: new Set<Node>(), current: new Set<Node>(), frame };
+            this._pcontacts.set(target, state);
+        } else {
+            state.frame = frame;
+        }
 
-            for (let i = 0; i < _count; i++) {
-                const _item = _bodies[i];
-                const _node = _item.node;
-                const _body = _item.body;
+        const isTargetShape = !!target.getComponent(Box2D_Shape);
+        const current = state.current;
+        current.clear();
 
-                if (!_node || !_node.isValid) continue;
+        // Box2D_Manager only registers Box2D_Shape instances, so this target can never have a valid candidate.
+        if (!isTargetShape || this.isCollideShapes) {
+            const bound = transform.getBoundingBoxToWorld();
+            const xMin = bound.xMin;
+            const xMax = bound.xMax;
+            const yMin = bound.yMin;
+            const yMax = bound.yMax;
 
-                // Never collide a shape with itself
-                if (_node === target) continue;
+            for (let i = 0; i < bodyCount; i++) {
+                const item = bodies[i];
+                const node = item.node;
+                if (!node || !node.isValid || node === target) continue;
 
-                // When isCollideShapes is false, skip collisions between two Box2D_Shapes
-                if (!this.isCollideShapes && isTargetShape && (_item instanceof Box2D_Shape || !!_node.getComponent(Box2D_Shape))) {
-                    continue;
-                }
-
-                const pos = _body.GetPosition();
+                const pos = item.body.GetPosition();
                 const px = pos.x * PHYSICS_2D_PTM_RATIO;
                 const py = pos.y * PHYSICS_2D_PTM_RATIO;
 
-                let isOverlapping = false;
-
                 if (this.useShapeOverlap) {
-                    const radius = _item.getBounce();
-
-                    const minX = px - radius;
-                    const maxX = px + radius;
-                    const minY = py - radius;
-                    const maxY = py + radius;
-
-                    isOverlapping = !(maxX < _bound.xMin || minX > _bound.xMax || maxY < _bound.yMin || minY > _bound.yMax);
-                } else {
-                    isOverlapping = _bound.contains(new Vec2(px, py));
+                    const radius = item.getBounce();
+                    if (px + radius < xMin || px - radius > xMax || py + radius < yMin || py - radius > yMax) continue;
+                } else if (px < xMin || px > xMax || py < yMin || py > yMax) {
+                    continue;
                 }
 
-                if (isOverlapping) {
-                    _nodes.add(_node);
-                }
+                current.add(node);
             }
+        }
 
-            let prevNodes = this._pcontacts.get(target);
-            if (!prevNodes) {
-                prevNodes = new Set<Node>();
-                this._pcontacts.set(target, prevNodes);
+        const previous = state.previous;
+        for (const node of current) {
+            if (previous.has(node)) {
+                this._onStay(target, node);
+            } else {
+                this._onEnter(target, node);
             }
+        }
 
-            _nodes.forEach(node => {
-                if (!prevNodes.has(node)) {
-                    this._onEnter(target, node);
-                } else {
-                    this._onStay(target, node);
-                }
-            });
+        for (const node of previous) {
+            if (current.has(node)) continue;
+            if (!this.isCollideShapes && isTargetShape) continue;
+            this._onExit(target, node);
+            this.isDestroyOnExit && node.destroy();
+        }
 
-            prevNodes.forEach(node => {
-                if (!_nodes.has(node)) {
-                    if (!this.isCollideShapes && isTargetShape && node.getComponent(Box2D_Shape)) {
-                        return;
-                    }
+        state.previous = current;
+        state.current = previous;
+    }
+
+    private _cleanup(frame: number): void {
+        for (const [target, state] of this._pcontacts) {
+            if (state.frame === frame) continue;
+
+            if (target && target.isValid) {
+                const isTargetShape = !!target.getComponent(Box2D_Shape);
+                for (const node of state.previous) {
+                    if (!this.isCollideShapes && isTargetShape) continue;
                     this._onExit(target, node);
                     this.isDestroyOnExit && node.destroy();
                 }
-            });
-
-            this._pcontacts.set(target, _nodes);
-        });
+            }
+            this._pcontacts.delete(target);
+        }
     }
 }

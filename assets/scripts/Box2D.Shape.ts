@@ -1,6 +1,8 @@
 import { _decorator, Component, Graphics, IVec2Like, Node, PHYSICS_2D_PTM_RATIO, PhysicsGroup2D, PhysicsSystem2D, randomRange, v2, Vec2, Vec3 } from 'cc';
 import { Box2D_IRaycastHit, Box2D_IShape } from './Box2D.Interfaces';
 import _$ from './Box2D.Utils';
+import { instance } from 'db://pts-core/scripts/utils/pClass';
+import { Box2D_Manager } from './Box2D.Manager';
 
 const { ccclass, property } = _decorator;
 
@@ -37,6 +39,10 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     abstract getBounce(): number
 
     create(wpos: IVec2Like, bounc: Node) {
+        if (this.body) {
+            this.revoke();
+        }
+
         const _world = PhysicsSystem2D.instance.physicsWorld.impl as b2.b2World;
         const _bodyDef = new b2.b2BodyDef();
         _bodyDef.type = b2.b2BodyType.b2_dynamicBody;
@@ -90,7 +96,22 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     }
 
     revoke() {
-        PhysicsSystem2D.instance.physicsWorld.impl.DestroyBody(this.body);
+        if (this.body) {
+            try {
+                const world = PhysicsSystem2D.instance?.physicsWorld?.impl as b2.b2World;
+                if (world) {
+                    world.DestroyBody(this.body);
+                }
+            } catch (e) {}
+            this.body = null;
+        }
+        try {
+            instance(Box2D_Manager)?.removeBody(this);
+        } catch (e) {}
+    }
+
+    protected onDestroy(): void {
+        this.revoke();
     }
 
     setTag(tag: number | PhysicsGroup2D | string) {
