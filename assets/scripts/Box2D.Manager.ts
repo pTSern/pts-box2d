@@ -1,5 +1,5 @@
 
-import { _decorator, Graphics, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, UITransform, v3 } from 'cc';
+import { _decorator, Component, Graphics, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, UITransform, v3 } from 'cc';
 import { Box2D_Base } from './Box2D.Base';
 import { editor_property, singleton } from 'db://pts-core/scripts/utils/pClass';
 import { pConst, pEngine } from 'db://pts-core/scripts/utils';
@@ -32,7 +32,7 @@ export class Box2D_Manager extends Box2D_Base {
     @property({ type: Graphics, tooltip: "Graphics component to use for debug drawing. If empty, it will be automatically added/retrieved.", group: pConst.GROUPS.EDITOR })
     graphics: Graphics = null;
 
-    @editor_property(Box2D_Shape)
+    @editor_property(Component)
     protected _bodies: Box2D_Shape[] = [];
 
     @editor_property(Pooler_Node)
