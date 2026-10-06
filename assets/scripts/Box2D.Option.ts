@@ -4,12 +4,14 @@ import { pTSAsset } from "db://pts-core/scripts/pTSAsset";
 const { ccclass, property } = _decorator
 
 @ccclass("Box2D_Option_Fabs")
+@pTSAsset.menu("Box2D/Option/Fabs")
 export class Box2D_Option_Fabs extends pTSAsset {
     @property({ type: [Prefab] })
     prefabs: Prefab[] = [];
 }
 
 @ccclass("Box2D_Option_Timer")
+@pTSAsset.menu("Box2D/Option/Timer")
 export class Box2D_Option_Timer extends pTSAsset {
     @property({ min: 0.01 })
     interval: number = 0.5;
@@ -19,6 +21,7 @@ export class Box2D_Option_Timer extends pTSAsset {
 }
 
 @ccclass("Box2D_Option_Data")
+@pTSAsset.menu("Box2D/Option/Data")
 export class Box2D_Option_Data extends pTSAsset {
     @property({ min: 1, type: CCInteger })
     amount: number = 5;
