@@ -97,13 +97,22 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
 
     revoke() {
         if (this.body) {
+            const bodyToDestroy = this.body;
+            this.body = null;
             try {
                 const world = PhysicsSystem2D.instance?.physicsWorld?.impl as b2.b2World;
                 if (world) {
-                    world.DestroyBody(this.body);
+                    if (world.IsLocked()) {
+                        setTimeout(() => {
+                            try {
+                                world.DestroyBody(bodyToDestroy);
+                            } catch (e) {}
+                        }, 0);
+                    } else {
+                        world.DestroyBody(bodyToDestroy);
+                    }
                 }
             } catch (e) {}
-            this.body = null;
         }
         try {
             instance(Box2D_Manager)?.removeBody(this);

@@ -93,7 +93,14 @@ export class Box2D_Manager extends Box2D_Base {
 
             if (!_node || !_node.isValid || !_body) {
                 if (_body) {
-                    try { this._world.DestroyBody(_body); } catch (e) {}
+                    try {
+                        if (this._world.IsLocked()) {
+                            const b = _body;
+                            setTimeout(() => { try { this._world.DestroyBody(b); } catch (e) {} }, 0);
+                        } else {
+                            this._world.DestroyBody(_body);
+                        }
+                    } catch (e) {}
                 }
                 this._bodies.splice(i, 1);
                 continue;
