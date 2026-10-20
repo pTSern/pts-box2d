@@ -3,6 +3,7 @@ import { Box2D_IRaycastHit, Box2D_IShape } from './Box2D.Interfaces';
 import _$ from './Box2D.Utils';
 import { instance } from 'db://pts-core/scripts/utils/pClass';
 import { Box2D_Manager } from './Box2D.Manager';
+import { setTimeoutRAF } from 'db://pts-core/scripts/utils/pGlobal';
 
 const { ccclass, property } = _decorator;
 
@@ -103,11 +104,9 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
                 const world = PhysicsSystem2D.instance?.physicsWorld?.impl as b2.b2World;
                 if (world) {
                     if (world.IsLocked()) {
-                        setTimeout(() => {
-                            try {
-                                world.DestroyBody(bodyToDestroy);
-                            } catch (e) {}
-                        }, 0);
+                        setTimeoutRAF(() => {
+                            try { world.DestroyBody(bodyToDestroy) } catch (e) {}
+                        });
                     } else {
                         world.DestroyBody(bodyToDestroy);
                     }
