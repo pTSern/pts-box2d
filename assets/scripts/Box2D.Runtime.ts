@@ -74,7 +74,6 @@ export class Box2D_Runtime {
 
     warmup() {
         const opt = this.option;
-        console.log(`Box2D_Runtime warmup: `, opt);
         for(let i = 0; i < opt.data.max; i++) {
             pEngine.NodeUtils.create({
                 name: `solid_${i}`,
@@ -158,32 +157,6 @@ export class Box2D_Runtime {
 
         });
         onFinishedCallback?.();
-
-        //for (let i = 0; i < countToSpawn; i++) {
-        //    const _localX = randomRange(-_anchor.x * _width, (1 - _anchor.x) * _width);
-        //    const _localY = randomRange(-_anchor.y * _height, (1 - _anchor.y) * _height);
-
-        //    const _worldPos = transform.convertToWorldSpaceAR(v3(_localX, _localY, 0));
-
-        //    const fab = pMath.rand(opt.prefabs);
-        //    pEngine.NodeUtils.create({
-        //        name: `solid_${i}`,
-        //        fab,
-        //        parent: this.pool,
-        //        pos: { position: _worldPos, isWorldPos: true },
-        //        isDisconnectPrefabLink: true,
-        //        pool: this.papa.pooler
-        //    }, [
-        //        {
-        //            type: Box2D_Shape,
-        //            modifier: (_comp, _node) => {
-        //                _comp.create(_worldPos, _node);
-        //                this.papa.addBody(_comp);
-        //                this.counter++;
-        //            }
-        //        }
-        //    ]);
-        //}
     }
 
     protected execute(onFinishedCallback: () => void): void {

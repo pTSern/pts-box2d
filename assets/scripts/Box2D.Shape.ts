@@ -4,6 +4,7 @@ import _$ from './Box2D.Utils';
 import { instance } from 'db://pts-core/scripts/utils/pClass';
 import { Box2D_Manager } from './Box2D.Manager';
 import { setTimeoutRAF } from 'db://pts-core/scripts/utils/pGlobal';
+import { Pooler_Node } from 'db://pts-core/scripts/pooler/Pooler.Node';
 
 const { ccclass, property } = _decorator;
 
