@@ -1,12 +1,11 @@
 
-import { _decorator, Component, Graphics, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, UITransform, v3 } from 'cc';
+import { _decorator, Component, Graphics, PHYSICS_2D_PTM_RATIO, PhysicsSystem2D, Prefab, UITransform, v3, Node } from 'cc';
 import { Box2D_Base } from './Box2D.Base';
 import { editor_property, singleton } from 'db://pts-core/scripts/utils/pClass';
-import { pConst, pEngine } from 'db://pts-core/scripts/utils';
+import { pConst, pEngine, pGlobal } from 'db://pts-core/scripts/utils';
 import { Box2D_Shape } from './Box2D.Shape';
-import { Helper_IdSelector } from 'db://pts-core/scripts/helper/Helper.IdSelector';
-import { Pooler_Node } from 'db://pts-core/scripts/pooler/Pooler.Node';
 import { Event_Listener } from 'db://pts-core/scripts/Components/Event/Event.Listener';
+import { Pooler_Node_Asset } from 'db://pts-core/scripts/pooler/Pooler.Node.Asset';
 
 const { ccclass, property, executionOrder } = _decorator;
 
@@ -20,8 +19,11 @@ const _$RAD2DEG = 180 / Math.PI;
 @singleton()
 @executionOrder(0)
 export class Box2D_Manager extends Box2D_Base {
-    @property({ type: Helper_IdSelector, group: pConst.GROUPS.CORE })
-    pool: Helper_IdSelector = new Helper_IdSelector();
+    @property({ type: Pooler_Node_Asset, group: pConst.GROUPS.CORE, visible: true })
+    protected _pooler: Pooler_Node_Asset[] = [];
+
+    @property({ visible: true, group: pConst.GROUPS.EDITOR, tooltip: "Enable mapping of prefabs to poolers for efficient object pooling." })
+    protected _enableMapDict: boolean = true;
 
     @property({ tooltip: "Enable debug drawing of shape bounds (Circle: RED, Box: GREEN)", group: pConst.GROUPS.EDITOR })
     debugDraw: boolean = false;
@@ -35,11 +37,32 @@ export class Box2D_Manager extends Box2D_Base {
     @editor_property(Component)
     protected _bodies: Box2D_Shape[] = [];
 
-    @editor_property(Pooler_Node)
-    protected _pooler: Pooler_Node = null;
-
     protected _world: b2.b2World = null;
-    get pooler() { return this._pooler; }
+
+    protected _map: Record<string, Pooler_Node_Asset> = {};
+    getPooler(fab: Prefab | Node | string) {
+        let _fab: string = null;
+        if(typeof fab === 'string') {
+            _fab = fab;
+        } else if(fab instanceof Prefab) {
+            _fab = fab.uuid;
+        } else if(fab instanceof Node) {
+            _fab = fab['_prefab']?.asset?.uuid;
+        }
+
+        return this._getPoolerByUUID(_fab);
+    }
+
+    put(fab: Node) {
+        if(!fab || !fab.isValid) return;
+
+        const _pooler = this.getPooler(fab);
+        if(!_pooler) {
+            fab.destroy();
+            return;
+        }
+        _pooler.put(fab)
+    }
 
     public get bodies() {
         return this._bodies;
@@ -60,8 +83,24 @@ export class Box2D_Manager extends Box2D_Base {
         }
     }
 
+    protected _getPoolerByUUID(uuid: string): Pooler_Node_Asset {
+        return this._map[uuid] || null;
+    }
+
+    ready() {
+        return Promise.all(this._pooler.map(_ret => _ret.ready));
+    }
+
     protected onLoad(): void {
-        this._pooler = Pooler_Node.pool(this.pool);
+        if(this._enableMapDict) {
+            this.ready().then( () => {
+                for(const _ret of this._pooler) {
+                    this._map[_ret.template_uuid] = _ret
+                }
+            })
+        } else {
+            this._getPoolerByUUID = _uuid => this._pooler.find(_ => _.template_uuid == _uuid )
+        }
 
         this._world = PhysicsSystem2D.instance.physicsWorld.impl as b2.b2World;
         this._fixed(this._world);
@@ -76,9 +115,7 @@ export class Box2D_Manager extends Box2D_Base {
             if (_) {
                 const node = _.node;
                 _.revoke();
-                if (node && node.isValid && this._pooler) {
-                    this._pooler.put(node);
-                }
+                this.put(node);
             }
         });
     }

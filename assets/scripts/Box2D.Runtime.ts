@@ -1,7 +1,7 @@
 import { editor_ccclass, editor_property, instance } from "db://pts-core/scripts/utils/pClass";
 import { Box2D_Option } from "./Box2D.Option";
 import { Node, PhysicsSystem2D, randomRange, UITransform, v3 } from "cc";
-import { pEngine } from "db://pts-core/scripts/utils";
+import { pEngine, pGlobal, pMath } from "db://pts-core/scripts/utils";
 import { Box2D_Manager } from "./Box2D.Manager";
 import { Box2D_Shape } from "./Box2D.Shape";
 
@@ -63,11 +63,7 @@ export class Box2D_Runtime {
             const shape = this._warms.shift();
             if (shape && shape.node && shape.node.isValid) {
                 shape.revoke();
-                if (this.papa?.pooler) {
-                    this.papa.pooler.put(shape.node);
-                } else {
-                    shape.node.destroy();
-                }
+                this.papa.put(shape.node);
             }
         }
     }
@@ -75,10 +71,12 @@ export class Box2D_Runtime {
     warmup() {
         const opt = this.option;
         for(let i = 0; i < opt.data.max; i++) {
+            const _fab = pMath.rand(opt.fabs.prefabs);
+            const _pooler = this.papa.getPooler(_fab);
             pEngine.NodeUtils.create({
                 name: `solid_${i}`,
-                fab: opt.fabs.prefabs,
-                pool: this.papa.pooler
+                fab: _fab,
+                pool: _pooler
             }, [
                 {
                     type: Box2D_Shape,
@@ -122,10 +120,12 @@ export class Box2D_Runtime {
             }
 
             if (!comp) {
+                const _fab = pMath.rand(opt.fabs.prefabs);
+                const _pooler = this.papa.getPooler(_fab);
                 const res = pEngine.NodeUtils.create({
                     name: `solid_${this.counter + i}`,
-                    fab: opt.fabs?.prefabs,
-                    pool: this.papa?.pooler
+                    fab: _fab,
+                    pool: _pooler
                 }, [
                     {
                         type: Box2D_Shape,
