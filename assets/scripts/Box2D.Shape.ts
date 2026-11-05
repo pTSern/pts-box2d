@@ -5,6 +5,7 @@ import { instance } from 'db://pts-core/scripts/utils/pClass';
 import { Box2D_Manager } from './Box2D.Manager';
 import { setTimeoutRAF } from 'db://pts-core/scripts/utils/pGlobal';
 import { Pooler_Node } from 'db://pts-core/scripts/pooler/Pooler.Node';
+import { pGlobal } from 'db://pts-core/scripts/utils';
 
 const { ccclass, property } = _decorator;
 
@@ -98,6 +99,7 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
     }
 
     revoke() {
+        pGlobal.log({ level: "DEV", group: "BOX2D" }, `[Box2D_Shape] revoke body: `, this.body);
         if (this.body) {
             const bodyToDestroy = this.body;
             this.body = null;
@@ -117,6 +119,7 @@ export abstract class Box2D_Shape extends Component implements Box2D_IShape {
         try {
             instance(Box2D_Manager)?.removeBody(this);
         } catch (e) {}
+        pGlobal.log({ level: "DEV", group: "BOX2D" }, `[Box2D_Shape] Complete Revoke`);
     }
 
     protected onDestroy(): void {
